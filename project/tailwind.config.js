@@ -1,0 +1,121 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        // Primary colors
+        green: {
+          DEFAULT: '#118865',
+          dark: '#087053',
+          light: '#eaf7ed',
+        },
+        // Neutral colors
+        ink: '#173d39',
+        muted: '#65827e',
+        line: '#d9e9e1',
+        cream: '#f4f8ed',
+        background: '#f8fbf7',
+        // Semantic colors
+        success: '#118865',
+        warning: '#e0932a',
+        error: '#e85b5b',
+        // Chart colors
+        transport: '#118865',
+        electricity: '#1594a1',
+        food: '#e0932a',
+        waste: '#8b6fc0',
+        travel: '#d65b5b',
+        // Feature backgrounds
+        mint: '#eaf7ed',
+        sky: '#eaf5f5',
+        'cream-alt': '#f8f4e9',
+      },
+      fontFamily: {
+        body: ['DM Sans', 'sans-serif'],
+        display: ['Fraunces', 'serif'],
+      },
+      fontSize: {
+        xs: ['10px', { lineHeight: '1.5' }],
+        sm: ['11px', { lineHeight: '1.5' }],
+        base: ['13px', { lineHeight: '1.5' }],
+        md: ['14px', { lineHeight: '1.6' }],
+        lg: ['15px', { lineHeight: '1.65' }],
+        xl: ['18px', { lineHeight: '1.3' }],
+        '2xl': ['22px', { lineHeight: '1.2' }],
+        '3xl': ['34px', { lineHeight: '1.03' }],
+        '4xl': ['48px', { lineHeight: '0.98' }],
+        '5xl': ['70px', { lineHeight: '0.98' }],
+      },
+      fontWeight: {
+        regular: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+      },
+      letterSpacing: {
+        tighter: '-0.07em',
+        tight: '-0.04em',
+        normal: '0',
+        wide: '0.08em',
+        wider: '0.11em',
+        widest: '0.16em',
+      },
+      spacing: {
+        '1': '8px',
+        '2': '16px',
+        '3': '24px',
+        '4': '32px',
+        '5': '40px',
+        '6': '48px',
+        '7': '56px',
+        '8': '64px',
+        '9': '72px',
+        '10': '80px',
+      },
+      borderRadius: {
+        sm: '12px',
+        md: '16px',
+        lg: '18px',
+        xl: '21px',
+        pill: '999px',
+        button: '999px',
+        card: '18px',
+        input: '12px',
+        badge: '999px',
+      },
+      boxShadow: {
+        sm: '0 5px 12px rgba(44, 115, 75, 0.07)',
+        md: '0 8px 18px rgba(17, 136, 101, 0.15)',
+        lg: '0 12px 22px rgba(17, 136, 101, 0.20)',
+        xl: '0 15px 30px rgba(32, 85, 61, 0.08)',
+        button: '0 8px 18px rgba(17, 136, 101, 0.15)',
+        'button-hover': '0 12px 22px rgba(17, 136, 101, 0.20)',
+        card: '0 2px 8px rgba(32, 85, 61, 0.04)',
+        'card-hover': '0 15px 30px rgba(32, 85, 61, 0.08)',
+      },
+      transitionDuration: {
+        fast: '200ms',
+        base: '250ms',
+        slow: '400ms',
+        smooth: '600ms',
+      },
+      transitionTimingFunction: {
+        DEFAULT: 'ease',
+      },
+      maxWidth: {
+        container: '1160px',
+      },
+      zIndex: {
+        base: '1',
+        dropdown: '10',
+        sticky: '20',
+        fixed: '30',
+        overlay: '40',
+        modal: '50',
+        tooltip: '60',
+      },
+    },
+  },
+  plugins: [],
+};

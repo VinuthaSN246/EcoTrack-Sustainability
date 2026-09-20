@@ -1,0 +1,182 @@
+/**
+ * Design Tokens
+ * 
+ * Centralized design system tokens for EcoTrack UI.
+ * These CSS custom properties ensure consistency across the application.
+ */
+
+:root {
+  /* ===== Color Tokens ===== */
+  
+  /* Primary palette */
+  --color-green: #118865;
+  --color-green-dark: #087053;
+  --color-green-light: #eaf7ed;
+  
+  /* Neutral palette */
+  --color-ink: #173d39;
+  --color-muted: #65827e;
+  --color-line: #d9e9e1;
+  --color-cream: #f4f8ed;
+  --color-background: #f8fbf7;
+  
+  /* Semantic colors */
+  --color-success: #118865;
+  --color-warning: #e0932a;
+  --color-error: #e85b5b;
+  
+  /* Chart colors */
+  --color-transport: #118865;
+  --color-electricity: #1594a1;
+  --color-food: #e0932a;
+  --color-waste: #8b6fc0;
+  --color-travel: #d65b5b;
+  
+  /* Feature card backgrounds */
+  --color-mint: #eaf7ed;
+  --color-sky: #eaf5f5;
+  --color-cream-alt: #f8f4e9;
+  
+  /* ===== Typography Tokens ===== */
+  
+  /* Font families */
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  
+  /* Font sizes */
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 34px;
+  --text-4xl: 48px;
+  --text-5xl: 70px;
+  
+  /* Font weights */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Line heights */
+  --leading-tight: 1.0;
+  --leading-snug: 1.1;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+  
+  /* Letter spacing */
+  --tracking-tighter: -0.07em;
+  --tracking-tight: -0.04em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-wider: 0.11em;
+  --tracking-widest: 0.16em;
+  
+  /* ===== Spacing Tokens ===== */
+  
+  /* Spacing scale (8px base) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 56px;
+  --space-8: 64px;
+  --space-9: 72px;
+  --space-10: 80px;
+  
+  /* Component-specific spacing */
+  --padding-sm: 12px;
+  --padding-md: 20px;
+  --padding-lg: 28px;
+  --padding-xl: 34px;
+  
+  /* Gap tokens */
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 12px;
+  --gap-lg: 16px;
+  --gap-xl: 20px;
+  --gap-2xl: 24px;
+  
+  /* ===== Border Radius Tokens ===== */
+  
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 18px;
+  --radius-xl: 21px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+  
+  /* Component-specific radius */
+  --radius-button: 999px;
+  --radius-card: 18px;
+  --radius-input: 12px;
+  --radius-badge: 999px;
+  
+  /* ===== Shadow Tokens ===== */
+  
+  --shadow-sm: 0 5px 12px rgba(44, 115, 75, 0.07);
+  --shadow-md: 0 8px 18px rgba(17, 136, 101, 0.15);
+  --shadow-lg: 0 12px 22px rgba(17, 136, 101, 0.20);
+  --shadow-xl: 0 15px 30px rgba(32, 85, 61, 0.08);
+  
+  /* Button shadows */
+  --shadow-button: 0 8px 18px rgba(17, 136, 101, 0.15);
+  --shadow-button-hover: 0 12px 22px rgba(17, 136, 101, 0.20);
+  
+  /* Card shadows */
+  --shadow-card: 0 2px 8px rgba(32, 85, 61, 0.04);
+  --shadow-card-hover: 0 15px 30px rgba(32, 85, 61, 0.08);
+  
+  /* ===== Transition Tokens ===== */
+  
+  --transition-fast: 200ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+  --transition-smooth: 600ms ease-in-out;
+  
+  /* Component-specific transitions */
+  --transition-button: transform 200ms ease, background 200ms ease, box-shadow 200ms ease;
+  --transition-card: transform 250ms ease, box-shadow 250ms ease;
+  --transition-input: border-color 200ms ease, background 200ms ease;
+  
+  /* ===== Z-Index Tokens ===== */
+  
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-tooltip: 60;
+  
+  /* ===== Responsive Breakpoints ===== */
+  
+  --breakpoint-mobile: 430px;
+  --breakpoint-tablet: 800px;
+  --breakpoint-desktop: 1160px;
+  --breakpoint-wide: 1440px;
+  
+  /* ===== Container Tokens ===== */
+  
+  --container-max-width: 1160px;
+  --container-padding: 32px;
+  --container-padding-mobile: 20px;
+  
+  /* ===== Header Tokens ===== */
+  
+  --header-height: 82px;
+  --header-height-mobile: 70px;
+}
+
+/* Dark mode support (future-proofing) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode tokens can be added here in the future */
+  }
+}
