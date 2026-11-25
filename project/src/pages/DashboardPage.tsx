@@ -54,6 +54,7 @@ import {
 } from '@/services/mlPrediction';
 import {
   loadSession,
+  getCurrentUser,
   saveSession,
   clearSession,
   registerUser,
@@ -145,9 +146,10 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
     mode: 'login', name: '', email: '', password: '', error: null, loading: false,
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [, setSaveError] = useState<string | null>(null);
   const [history, setHistory] = useState<FootprintRecord[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [, setHistoryLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,20 +164,31 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
     return () => { cancelled = true; };
   }, [data]);
 
+  useEffect(() => {
+    getCurrentUser().then(({ data: sessionData, error }) => {
+      if (!error && sessionData?.user) {
+        setUser(sessionData.user);
+        saveSession(sessionData.user);
+      }
+      setSessionReady(true);
+    });
+  }, []);
+
   // Load history when user changes
   useEffect(() => {
+    if (!sessionReady) return;
     if (!user) {
       setHistory([]);
       return;
     }
     setHistoryLoading(true);
-    getFootprints(user.id).then(({ data: d, error }) => {
+    getFootprints().then(({ data: d, error }) => {
       setHistoryLoading(false);
       if (d && !error) {
         setHistory(d.footprints);
       }
     });
-  }, [user]);
+  }, [user, sessionReady]);
 
   const mlDiff = mlPrediction ? mlPrediction.predictedCO2 - result.totalCO2 : null;
   const mlDiffPct = mlPrediction && result.totalCO2 > 0 ? (Math.abs(mlDiff!) / result.totalCO2) * 100 : null;
@@ -209,13 +222,14 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
 
   // ── Save footprint handler ──────────────────────
   function handleSaveFootprint() {
+    if (!sessionReady) return;
     if (!user) {
       setAuthOpen(true);
       return;
     }
     setSaveStatus('saving');
     setSaveError(null);
-    saveFootprint(user.id, data).then(({ data: d, error }) => {
+    saveFootprint(data).then(({ data: d, error }) => {
       if (d && !error) {
         setSaveStatus('saved');
         setHistory((prev) => [d.footprint, ...prev]);
@@ -741,10 +755,10 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
                   type="password"
                   value={authForm.password}
                   onChange={(e) => setAuthForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 12 characters"
                   required
                   autoComplete={authForm.mode === 'register' ? 'new-password' : 'current-password'}
-                  minLength={6}
+                  minLength={authForm.mode === 'register' ? 12 : undefined}
                 />
               </div>
               {authForm.error && (

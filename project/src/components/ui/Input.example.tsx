@@ -20,8 +20,9 @@ export const InputExamples: React.FC = () => {
       setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
     } else {
       setErrors(prev => {
-        const { email, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next.email;
+        return next;
       });
     }
   };
@@ -33,8 +34,9 @@ export const InputExamples: React.FC = () => {
       setErrors(prev => ({ ...prev, distance: 'Please enter a valid positive number' }));
     } else {
       setErrors(prev => {
-        const { distance, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next.distance;
+        return next;
       });
     }
   };

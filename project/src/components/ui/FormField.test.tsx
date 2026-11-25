@@ -141,7 +141,7 @@ describe('FormField Component', () => {
 
 describe('FormField and Input Integration', () => {
   it('passes error state from FormField to Input', () => {
-    const { rerender } = render(
+    render(
       <FormField label="Email" error="Invalid">
         <Input placeholder="test@example.com" error={true} />
       </FormField>

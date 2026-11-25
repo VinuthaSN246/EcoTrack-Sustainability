@@ -25,8 +25,9 @@ export const ComponentShowcase: React.FC = () => {
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => {
-        const { [field]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[field];
+        return next;
       });
     }
   };

@@ -5,11 +5,9 @@ import {
   Bell,
   Bike,
   Calendar,
-  Camera,
   Check,
   ChevronRight,
   Clock,
-  Droplets,
   Edit3,
   Flame,
   Heart,
@@ -19,7 +17,6 @@ import {
   Lock,
   LogOut,
   Mail,
-  MapPin,
   Moon,
   Recycle,
   Ruler,
@@ -31,7 +28,6 @@ import {
   Target,
   Trash2,
   TrendingDown,
-  TreePine,
   Trophy,
   User,
   UserCheck,
@@ -189,8 +185,8 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     if (!u) { setLoading(false); return; }
 
     Promise.all([
-      getFootprints(u.id),
-      getLatestFootprint(u.id),
+      getFootprints(),
+      getLatestFootprint(),
     ]).then(([allRes, latestRes]) => {
       setLoading(false);
       if (allRes.data && !allRes.error) setRecords(allRes.data.footprints);

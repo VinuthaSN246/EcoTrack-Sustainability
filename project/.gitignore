@@ -21,3 +21,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+backend/.env
+backend/ecotrack.db
+backend/*.db
+backend/model/*.pkl
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/

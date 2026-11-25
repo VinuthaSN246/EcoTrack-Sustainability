@@ -44,6 +44,26 @@ const categoryColors: Record<string, { bg: string; color: string }> = {
   Travel:         { bg: '#fef3f0', color: '#d4562f' },
 };
 
+function generateRecommendationsFromStoredRecord(record: FootprintRecord): Recommendation[] {
+  const categories: Array<{ category: Recommendation['category']; value: number; title: string; action: string }> = [
+    { category: 'Transportation', value: record.transportation, title: 'Choose lower emission trips', action: 'Try public transport, carpooling, walking, or cycling for suitable journeys.' },
+    { category: 'Electricity', value: record.electricity, title: 'Reduce home electricity use', action: 'Review heating, cooling, and appliance use; choose efficient options where practical.' },
+    { category: 'Food', value: record.food, title: 'Lower food related emissions', action: 'Consider adding more plant based meals and planning portions to reduce food waste.' },
+    { category: 'Waste', value: record.waste, title: 'Reduce household waste', action: 'Prioritize reuse and recycling, and check local composting options.' },
+    { category: 'Travel', value: record.travel, title: 'Plan air travel thoughtfully', action: 'When feasible, combine trips or use lower emission alternatives.' },
+  ];
+  const total = categories.reduce((sum, item) => sum + item.value, 0);
+  return categories.filter((item) => total > 0 && item.value > 0).sort((a, b) => b.value - a.value).slice(0, 3).map((item, index) => ({
+    id: `stored-${item.category.toLowerCase()}`,
+    category: item.category,
+    title: item.title,
+    explanation: `This category contributed ${item.value.toFixed(2)} tonnes CO₂e to your latest saved estimate.`,
+    action: item.action,
+    priority: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Low',
+    estimatedImpact: null,
+  }));
+}
+
 function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
   const Icon = categoryIcons[rec.category] ?? Leaf;
   const ps = priorityStyles[rec.priority];
@@ -93,6 +113,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
 export function RecommendationsPage({ formData, onNavigate }: RecommendationsPageProps) {
   const [latestRecord, setLatestRecord] = useState<FootprintRecord | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Try to load latest saved footprint from the database for users who don't have local formData
   useEffect(() => {
@@ -101,10 +122,12 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
       setDbLoading(false);
       return;
     }
-    getLatestFootprint(user.id).then(({ data, error }) => {
+    getLatestFootprint().then(({ data, error }) => {
       setDbLoading(false);
       if (data && !error && data.footprint) {
         setLatestRecord(data.footprint);
+      } else if (error && error !== 'HTTP 404' && error !== 'Authentication required') {
+        setLoadError(error);
       }
     });
   }, []);
@@ -112,19 +135,28 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
   // Build recommendations from formData (most accurate, direct from session)
   const recommendations = formData
     ? generateRecommendationsFromFormData(formData).recommendations
-    : [];
+    : latestRecord
+      ? generateRecommendationsFromStoredRecord(latestRecord)
+      : [];
 
   const headline = formData
     ? generateRecommendationsFromFormData(formData).headline
-    : null;
+    : latestRecord
+      ? 'Focus on the categories contributing most to your latest saved footprint.'
+      : null;
 
   const isLoading = !formData && dbLoading;
-  const hasNoData = !formData && !dbLoading;
+  const hasNoData = !formData && !latestRecord && !dbLoading;
+  const visibleRecommendations = recommendations.length > 0
+    ? recommendations
+    : latestRecord
+      ? generateRecommendationsFromStoredRecord(latestRecord)
+      : [];
 
   // Group recs by priority
-  const highRecs   = recommendations.filter((r) => r.priority === 'High');
-  const mediumRecs = recommendations.filter((r) => r.priority === 'Medium');
-  const lowRecs    = recommendations.filter((r) => r.priority === 'Low');
+  const highRecs   = visibleRecommendations.filter((r) => r.priority === 'High');
+  const mediumRecs = visibleRecommendations.filter((r) => r.priority === 'Medium');
+  const lowRecs    = visibleRecommendations.filter((r) => r.priority === 'Low');
 
   return (
     <div className="calc-page">
@@ -147,6 +179,7 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
       </div>
 
       <div className="container calc-body">
+        {loadError && <p className="field-error" role="alert">Could not load saved recommendations data: {loadError}</p>}
 
         {/* Loading */}
         {isLoading && (
@@ -178,7 +211,7 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
         )}
 
         {/* Recommendations */}
-        {formData && recommendations.length > 0 && (
+        {visibleRecommendations.length > 0 && (
           <>
             {/* AI Insights header */}
             <section className="dashboard-recs-section" style={{ marginBottom: 32 }}>
@@ -220,7 +253,7 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
 
             {/* Cards grid */}
             <div className="dashboard-recs-grid" style={{ marginBottom: 32 }}>
-              {recommendations.map((rec, idx) => (
+              {visibleRecommendations.map((rec, idx) => (
                 <RecommendationCard key={rec.id} rec={rec} index={idx} />
               ))}
             </div>

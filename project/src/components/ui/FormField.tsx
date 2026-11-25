@@ -82,7 +82,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   // Clone children to pass IDs for proper ARIA associations
   const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      return React.cloneElement(child as React.ReactElement<any>, {
+      const controlProps: { id: string; 'aria-describedby'?: string } = {
         id: fieldId,
         'aria-describedby': [
           helperText ? helperId : null,
@@ -90,7 +90,8 @@ export const FormField: React.FC<FormFieldProps> = ({
         ]
           .filter(Boolean)
           .join(' ') || undefined,
-      });
+      };
+      return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, controlProps);
     }
     return child;
   });

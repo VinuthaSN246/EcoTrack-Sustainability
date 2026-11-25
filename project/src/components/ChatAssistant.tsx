@@ -88,7 +88,7 @@ export function ChatAssistant() {
         <div className="chat-header">
           <div className="chat-header-title">
             <Bot size={20} />
-            <span>AI Sustainability Assistant</span>
+            <span>Sustainability Assistant</span>
           </div>
           <div className="chat-header-actions">
             <button onClick={clearChat} aria-label="Clear chat" title="Clear chat" className="chat-icon-btn">
@@ -106,7 +106,7 @@ export function ChatAssistant() {
               <div className="chat-empty-icon">
                 <Bot size={32} />
               </div>
-              <p>Hi! I'm your AI Sustainability Assistant. Ask me anything about reducing your carbon footprint.</p>
+              <p>Hi! I can share quick, rule-based sustainability tips. Ask me about reducing your footprint.</p>
               
               <div className="chat-suggestions">
                 {SUGGESTED_QUESTIONS.map((q) => (

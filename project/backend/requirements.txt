@@ -4,4 +4,6 @@ scikit-learn
 pandas
 numpy
 sqlalchemy
+psycopg[binary]
 werkzeug
+gunicorn

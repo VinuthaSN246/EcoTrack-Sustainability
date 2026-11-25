@@ -51,19 +51,20 @@ export async function fetchMLPrediction(data: FormData): Promise<MLPredictionRes
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
+    let res: Response;
+    try {
+      res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) {
-      const body = await res.text();
-      return { prediction: null, error: `API returned ${res.status}: ${body}` };
+      return { prediction: null, error: `Prediction service returned ${res.status}` };
     }
 
     const json: MLPredictionResult = await res.json();

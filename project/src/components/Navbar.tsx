@@ -10,6 +10,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ onNavigate, onGoDashboard, hasData, currentPage = 'home' }: NavbarProps) {
+  void hasData;
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleNavClick = (page: 'home' | 'calculator' | 'results' | 'dashboard' | 'progress' | 'profile' | 'recommendations') => {

@@ -42,20 +42,20 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<Api
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        signal: controller.signal,
+        credentials: 'include',
+      });
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    const json = await res.json();
-    if (!res.ok) {
-      return { data: null, error: json.error || `HTTP ${res.status}` };
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return { data: null, error: json.error || `HTTP ${res.status}` };
+      return { data: json as T, error: null };
+    } finally {
+      clearTimeout(timeout);
     }
-    return { data: json as T, error: null };
   } catch {
     return { data: null, error: 'Backend service unavailable' };
   }
@@ -77,16 +77,19 @@ export async function loginUser(email: string, password: string): Promise<ApiRes
   });
 }
 
+export async function getCurrentUser(): Promise<ApiResponse<{ user: User | null }>> {
+  return apiFetch('/auth/me');
+}
+
 // ── Footprints ──────────────────────────────────────────────────
 
-export async function saveFootprint(userId: number, formData: FormData): Promise<ApiResponse<{ footprint: FootprintRecord; message: string }>> {
+export async function saveFootprint(formData: FormData): Promise<ApiResponse<{ footprint: FootprintRecord; message: string }>> {
   const result = calculateFromFormData(formData);
   const ecoScore = calculateEcoScore(result.totalCO2);
 
   return apiFetch('/footprints', {
     method: 'POST',
     body: JSON.stringify({
-      user_id: userId,
       transportation: result.transportationCO2,
       electricity: result.electricityCO2,
       food: result.foodCO2,
@@ -98,12 +101,12 @@ export async function saveFootprint(userId: number, formData: FormData): Promise
   });
 }
 
-export async function getFootprints(userId: number): Promise<ApiResponse<{ footprints: FootprintRecord[]; count: number }>> {
-  return apiFetch(`/footprints?user_id=${userId}`);
+export async function getFootprints(): Promise<ApiResponse<{ footprints: FootprintRecord[]; count: number }>> {
+  return apiFetch('/footprints');
 }
 
-export async function getLatestFootprint(userId: number): Promise<ApiResponse<{ footprint: FootprintRecord }>> {
-  return apiFetch(`/footprints/latest?user_id=${userId}`);
+export async function getLatestFootprint(): Promise<ApiResponse<{ footprint: FootprintRecord }>> {
+  return apiFetch('/footprints/latest');
 }
 
 // ── Session management (localStorage) ────────────────────────────
@@ -111,13 +114,14 @@ export async function getLatestFootprint(userId: number): Promise<ApiResponse<{ 
 const SESSION_KEY = 'ecotrack_user';
 
 export function saveSession(user: User): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(user)); } catch { /* session cookie remains authoritative */ }
 }
 
 export function loadSession(): User | null {
-  const raw = localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
+  // Cache only display information; the server cookie remains authoritative.
   try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
     return JSON.parse(raw) as User;
   } catch {
     return null;
@@ -125,7 +129,8 @@ export function loadSession(): User | null {
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore storage restrictions */ }
+  void apiFetch('/auth/logout', { method: 'POST' });
 }
 
 // ── AI Assistant ────────────────────────────────────────────────

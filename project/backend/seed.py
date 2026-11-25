@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import os
 from database import SessionLocal, User, FootprintRecord
 
 def seed():
@@ -9,7 +10,7 @@ def seed():
     if not user:
         # Create a test user
         import werkzeug.security
-        pwd_hash = werkzeug.security.generate_password_hash("password123")
+        pwd_hash = werkzeug.security.generate_password_hash(os.environ.get('ECOTRACK_DEMO_PASSWORD', 'change-this-demo-password'))
         user = User(name="Test User", email="test@example.com", password_hash=pwd_hash)
         session.add(user)
         session.commit()

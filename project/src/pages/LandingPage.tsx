@@ -1,18 +1,14 @@
 import {
   ArrowRight,
   BarChart3,
-  CarFront,
   Check,
   ChevronDown,
   CircleCheck,
-  Factory,
   Leaf,
   MessageCircle,
   Recycle,
   Sparkles,
   Sprout,
-  Trash2,
-  Zap,
 } from 'lucide-react';
 
 const features = [

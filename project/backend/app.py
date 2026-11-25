@@ -19,10 +19,14 @@ Endpoints:
     GET  /api/recommendations   — Get stored recommendation templates
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
+from sqlalchemy.exc import IntegrityError
 import sys
 import os
+import math
+import time
+from collections import defaultdict, deque
 
 # Add backend/ to path so services can be imported
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -31,7 +35,38 @@ from services.model_service import predict, load_model
 from services import db_service
 
 app = Flask(__name__)
-CORS(app)
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY') or 'dev-only-change-this-secret',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get('COOKIE_SECURE', '').lower() == 'true',
+)
+if not os.environ.get('SECRET_KEY') and os.environ.get('FLASK_ENV') == 'production':
+    raise RuntimeError('SECRET_KEY must be configured in production')
+allowed_origins = [origin.strip() for origin in os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',') if origin.strip()]
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+_rate_events = defaultdict(deque)
+
+def enforce_rate_limit(bucket: str, limit: int, window_seconds: int):
+    now = time.monotonic()
+    key = (bucket, request.remote_addr or 'unknown')
+    events = _rate_events[key]
+    while events and events[0] <= now - window_seconds:
+        events.popleft()
+    if len(events) >= limit:
+        return jsonify({'error': 'Too many requests. Please try again later.'}), 429
+    events.append(now)
+    return None
+
+@app.before_request
+def attach_authenticated_user():
+    request.user_id = session.get('user_id')
+
+def require_auth():
+    if not request.user_id:
+        return jsonify({'error': 'Authentication required'}), 401
+    return None
 
 
 # ── Health ───────────────────────────────────────────────────────
@@ -40,21 +75,22 @@ CORS(app)
 def health():
     try:
         load_model()
-        return jsonify({'status': 'ok', 'model_loaded': True})
-    except Exception as e:
-        return jsonify({'status': 'error', 'model_loaded': False, 'error': str(e)}), 500
+        model_loaded = True
+    except Exception:
+        app.logger.exception('Health check failed')
+        model_loaded = False
+    try:
+        db_service.init_db()
+        return jsonify({'status': 'ok' if model_loaded else 'degraded', 'model_loaded': model_loaded, 'database': 'ok'})
+    except Exception:
+        app.logger.exception('Database health check failed')
+        return jsonify({'status': 'error', 'model_loaded': model_loaded, 'database': 'error'}), 500
 
 
 # ── ML Prediction ────────────────────────────────────────────────
 
-@app.route('/api/predict', methods=['POST', 'OPTIONS'])
+@app.route('/api/predict', methods=['POST'])
 def predict_endpoint():
-    if request.method == 'OPTIONS':
-        resp = jsonify({'ok': True})
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-
     data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'Request body must be JSON'}), 400
@@ -68,65 +104,89 @@ def predict_endpoint():
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
+    numeric_ranges = {
+        'daily_distance_km': (0, 500), 'travel_days_per_week': (0, 7),
+        'electricity_kwh_month': (0, 10000), 'waste_kg_week': (0, 1000),
+    }
+    for field, (low, high) in numeric_ranges.items():
+        value = data[field]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+            return jsonify({'error': f'{field} must be between {low} and {high}'}), 400
+    categories = {
+        'transport_type': {'Car', 'Motorcycle', 'Bus', 'Train', 'Bicycle', 'Walking', 'Electric Vehicle'},
+        'diet_type': {'Vegan', 'Vegetarian', 'Non-Vegetarian', 'Mixed'},
+        'food_waste_frequency': {'Rarely', 'Sometimes', 'Often'},
+        'recycling_frequency': {'Never', 'Sometimes', 'Often'},
+        'flights_per_year': {'0', '1-2', '3-5', '6+'},
+    }
+    for field, allowed in categories.items():
+        if data[field] not in allowed:
+            return jsonify({'error': f'Invalid {field}'}), 400
+
     try:
         result = predict(data)
         return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
+    except Exception:
+        app.logger.exception('Prediction failed')
+        return jsonify({'error': 'Prediction failed'}), 500
 
 
 # ── Auth ─────────────────────────────────────────────────────────
 
-@app.route('/api/auth/register', methods=['POST', 'OPTIONS'])
+@app.route('/api/auth/register', methods=['POST'])
 def register():
-    if request.method == 'OPTIONS':
-        resp = jsonify({'ok': True})
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-
+    limited = enforce_rate_limit('register', 5, 3600)
+    if limited: return limited
     data = request.get_json(silent=True)
-    if not data:
+    if not isinstance(data, dict):
         return jsonify({'error': 'Request body must be JSON'}), 400
 
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip()
+    name = data.get('name', '')
+    email = data.get('email', '')
     password = data.get('password', '')
-
+    if not all(isinstance(v, str) for v in (name, email, password)):
+        return jsonify({'error': 'Name, email, and password must be text'}), 400
+    name, email = name.strip(), email.strip()
     if not name or not email or not password:
         return jsonify({'error': 'Name, email, and password are required'}), 400
 
+    if len(name) > 100 or len(email) > 254 or len(password) > 256:
+        return jsonify({'error': 'One or more fields exceed the maximum length'}), 400
+
     import re
-    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+$'
     if not re.match(email_regex, email):
         return jsonify({'error': 'Invalid email address format'}), 400
 
-    if len(password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if len(password) < 12:
+        return jsonify({'error': 'Password must be at least 12 characters'}), 400
 
     try:
         user = db_service.create_user(name, email, password)
+        session['user_id'] = user['id']
         return jsonify({'user': user, 'message': 'Registration successful'}), 201
     except ValueError as e:
         return jsonify({'error': str(e)}), 409
-    except Exception as e:
-        return jsonify({'error': f'Registration failed: {str(e)}'}), 500
+    except IntegrityError:
+        return jsonify({'error': 'Email already registered'}), 409
+    except Exception:
+        app.logger.exception('Registration failed')
+        return jsonify({'error': 'Registration failed'}), 500
 
 
-@app.route('/api/auth/login', methods=['POST', 'OPTIONS'])
+@app.route('/api/auth/login', methods=['POST'])
 def login():
-    if request.method == 'OPTIONS':
-        resp = jsonify({'ok': True})
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-
+    limited = enforce_rate_limit('login', 10, 60)
+    if limited: return limited
     data = request.get_json(silent=True)
-    if not data:
+    if not isinstance(data, dict):
         return jsonify({'error': 'Request body must be JSON'}), 400
 
-    email = data.get('email', '').strip()
+    email = data.get('email', '')
     password = data.get('password', '')
+    if not isinstance(email, str) or not isinstance(password, str):
+        return jsonify({'error': 'Email and password must be text'}), 400
+    email = email.strip()
 
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
@@ -134,27 +194,46 @@ def login():
     user = db_service.authenticate_user(email, password)
     if user is None:
         return jsonify({'error': 'Invalid email or password'}), 401
-
+    session.clear()
+    session['user_id'] = user['id']
     return jsonify({'user': user, 'message': 'Login successful'})
+
+
+@app.errorhandler(413)
+def request_too_large(_error):
+    return jsonify({'error': 'Request body exceeds the allowed size.'}), 413
+
+@app.route('/api/auth/me', methods=['GET'])
+def current_user():
+    if not request.user_id:
+        return jsonify({'user': None}), 200
+    try:
+        user = db_service.get_user(request.user_id)
+    except Exception:
+        app.logger.exception('Loading current user failed')
+        return jsonify({'error': 'Unable to load session'}), 500
+    if not user:
+        session.clear()
+    return jsonify({'user': user})
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out'})
 
 
 # ── Footprints ───────────────────────────────────────────────────
 
-@app.route('/api/footprints', methods=['POST', 'OPTIONS'])
+@app.route('/api/footprints', methods=['POST'])
 def save_footprint():
-    if request.method == 'OPTIONS':
-        resp = jsonify({'ok': True})
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
+    auth_error = require_auth()
+    if auth_error: return auth_error
 
     data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'Request body must be JSON'}), 400
 
-    user_id = data.get('user_id')
-    if not user_id or not isinstance(user_id, int):
-        return jsonify({'error': 'user_id (integer) is required'}), 400
+    user_id = request.user_id
 
     required = ['transportation', 'electricity', 'food', 'waste', 'travel', 'total_co2', 'eco_score']
     missing = [f for f in required if f not in data]
@@ -163,8 +242,12 @@ def save_footprint():
 
     for f in required:
         val = data[f]
-        if not isinstance(val, (int, float)) or isinstance(val, bool) or val < 0:
+        if not isinstance(val, (int, float)) or isinstance(val, bool) or not math.isfinite(val) or val < 0:
             return jsonify({'error': f'{f} must be a non-negative number'}), 400
+    if any(data[f] > 10000 for f in required if f != 'eco_score'):
+        return jsonify({'error': 'Emission values must not exceed 10000 tonnes CO2e'}), 400
+    if not isinstance(data['eco_score'], int) or isinstance(data['eco_score'], bool) or not 0 <= data['eco_score'] <= 100:
+        return jsonify({'error': 'eco_score must be an integer from 0 to 100'}), 400
 
     try:
         record = db_service.save_footprint(
@@ -178,36 +261,39 @@ def save_footprint():
             eco_score=int(data['eco_score']),
         )
         return jsonify({'footprint': record, 'message': 'Footprint saved'}), 201
-    except Exception as e:
-        return jsonify({'error': f'Save failed: {str(e)}'}), 500
+    except Exception:
+        app.logger.exception('Saving footprint failed')
+        return jsonify({'error': 'Save failed'}), 500
 
 
 @app.route('/api/footprints', methods=['GET'])
 def get_footprints():
-    user_id = request.args.get('user_id', type=int)
-    if not user_id:
-        return jsonify({'error': 'user_id query parameter is required'}), 400
+    auth_error = require_auth()
+    if auth_error: return auth_error
+    user_id = request.user_id
 
     try:
         records = db_service.get_footprints(user_id)
         return jsonify({'footprints': records, 'count': len(records)})
-    except Exception as e:
-        return jsonify({'error': f'Retrieval failed: {str(e)}'}), 500
+    except Exception:
+        app.logger.exception('Retrieving footprints failed')
+        return jsonify({'error': 'Retrieval failed'}), 500
 
 
 @app.route('/api/footprints/latest', methods=['GET'])
 def get_latest_footprint():
-    user_id = request.args.get('user_id', type=int)
-    if not user_id:
-        return jsonify({'error': 'user_id query parameter is required'}), 400
+    auth_error = require_auth()
+    if auth_error: return auth_error
+    user_id = request.user_id
 
     try:
         record = db_service.get_latest_footprint(user_id)
         if record is None:
             return jsonify({'footprint': None, 'message': 'No saved footprints yet'}), 404
         return jsonify({'footprint': record})
-    except Exception as e:
-        return jsonify({'error': f'Retrieval failed: {str(e)}'}), 500
+    except Exception:
+        app.logger.exception('Retrieving latest footprint failed')
+        return jsonify({'error': 'Retrieval failed'}), 500
 
 
 # ── Recommendations ──────────────────────────────────────────────
@@ -217,26 +303,20 @@ def get_recommendations():
     try:
         recs = db_service.get_recommendations()
         return jsonify({'recommendations': recs, 'count': len(recs)})
-    except Exception as e:
-        return jsonify({'error': f'Retrieval failed: {str(e)}'}), 500
+    except Exception:
+        app.logger.exception('Recommendations retrieval failed')
+        return jsonify({'error': 'Retrieval failed'}), 500
 # ── AI Assistant ─────────────────────────────────────────────────
 
-@app.route('/api/assistant', methods=['POST', 'OPTIONS'])
+@app.route('/api/assistant', methods=['POST'])
 def assistant():
-    if request.method == 'OPTIONS':
-        resp = jsonify({'ok': True})
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-
     data = request.get_json(silent=True)
-    if not data or 'message' not in data:
+    if not isinstance(data, dict) or not isinstance(data.get('message'), str):
         return jsonify({'error': 'Message is required'}), 400
 
+    if len(data['message']) > 2000:
+        return jsonify({'error': 'Message is too long'}), 400
     user_msg = data['message'].lower()
-    
-    import time
-    time.sleep(1) # Simulate network delay
 
     # Simple rule-based responses
     if 'reduce' in user_msg and 'food' in user_msg:

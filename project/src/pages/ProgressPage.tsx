@@ -26,7 +26,6 @@ import {
   LogOut,
   Minus,
   Recycle,
-  RefreshCw,
   Search,
   Shield,
   Sliders,
@@ -43,6 +42,7 @@ import {
 import {
   clearSession,
   getFootprints,
+  getCurrentUser,
   loadSession,
   loginUser,
   registerUser,
@@ -127,6 +127,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
   const [records, setRecords] = useState<FootprintRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [useDemoData, setUseDemoData] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Interactive controls state
   const [timeframe, setTimeframe] = useState<'all' | '6m' | '30d'>('all');
@@ -173,9 +174,9 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
       return;
     }
     setLoading(true);
-    getFootprints(u.id).then(({ data, error }) => {
+    getFootprints().then(({ data, error }) => {
       setLoading(false);
-      if (data && !error && data.footprints.length > 0) {
+      if (data && !error) {
         setRecords(data.footprints);
       } else {
         setRecords([]);
@@ -184,10 +185,18 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
   };
 
   useEffect(() => {
-    const u = loadSession();
-    setUser(u);
-    loadUserRecords(u);
+    getCurrentUser().then(({ data, error }) => {
+      const u = !error ? data?.user ?? null : null;
+      setUser(u);
+      if (u) saveSession(u);
+      setSessionReady(true);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    loadUserRecords(user);
+  }, [sessionReady, user]);
 
   // Active dataset: demo or real
   const activeRecords = useMemo(() => {
@@ -395,25 +404,8 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
 
   // Quick Demo Login
   const handleQuickDemoLogin = () => {
-    setAuthForm((p) => ({ ...p, loading: true, error: null }));
-    loginUser('test@ecotrack.com', 'password123').then(({ data, error }) => {
-      if (data && !error) {
-        saveSession(data.user);
-        setUser(data.user);
-        setAuthOpen(false);
-        setUseDemoData(false);
-        setAuthForm((p) => ({ ...p, loading: false, error: null }));
-        loadUserRecords(data.user);
-      } else {
-        setAuthForm((p) => ({
-          ...p,
-          loading: false,
-          error: error || 'Could not log in to demo account. Switching to interactive demo mode.',
-        }));
-        setUseDemoData(true);
-        setAuthOpen(false);
-      }
-    });
+    setUseDemoData(true);
+    setAuthOpen(false);
   };
 
   // Save current local calculation
@@ -424,7 +416,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
       return;
     }
     setSaveStatus('saving');
-    saveFootprint(user.id, localFormData).then(({ data, error }) => {
+    saveFootprint(localFormData).then(({ data, error }) => {
       if (data && !error) {
         setSaveStatus('saved');
         setRecords((prev) => [data.footprint, ...prev]);
@@ -519,7 +511,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
               type="button"
               className={`button button-small ${useDemoData ? 'button-saved' : 'button-ghost'}`}
               onClick={() => setUseDemoData((prev) => !prev)}
-              title="Toggle between your live database records and simulated multi-month progression data"
+              title="Toggle sample history for preview"
             >
               <Sparkles size={14} />
               {useDemoData ? 'Viewing Demo Data' : 'Try Demo Mode'}
@@ -602,11 +594,11 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
               <Target size={30} />
             </div>
             <h2 className="progress-empty-title">
-              {!user ? 'Track your carbon reductions over time' : 'No recorded calculations found yet'}
+        {!user ? 'Track your carbon reductions over time' : 'No recorded calculations found yet'}
             </h2>
             <p className="progress-empty-text">
               {!user
-                ? 'Sign in to sync your calculation history across sessions, or toggle Interactive Demo Mode to explore real-time charts and achievements.'
+                ? 'Sign in to sync your calculation history across sessions, or explore the clearly labeled sample progression.'
                 : 'Calculate your carbon footprint and save it to begin building your personal sustainability progression.'}
             </p>
             <div className="progress-empty-actions">
@@ -639,7 +631,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
         )}
 
         {/* ── Loading Spinner ─────────────────────────── */}
-        {loading && (
+        {(loading || !sessionReady) && (
           <div className="progress-loading">
             <Loader2 size={32} className="spin" />
             <span>Loading your sustainability progress...</span>
@@ -1182,7 +1174,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
                   type="password"
                   required
                   placeholder="••••••••"
-                  minLength={6}
+                  minLength={authForm.mode === 'register' ? 12 : undefined}
                   value={authForm.password}
                   onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                 />
@@ -1204,7 +1196,6 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
                 )}
               </button>
 
-              {/* Quick Demo Login Option */}
               <button
                 type="button"
                 className="button button-ghost"
@@ -1212,7 +1203,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
                 onClick={handleQuickDemoLogin}
                 disabled={authForm.loading}
               >
-                <Sparkles size={14} /> Quick Demo Account Login
+                <Sparkles size={14} /> Preview Sample Progress
               </button>
 
               <button

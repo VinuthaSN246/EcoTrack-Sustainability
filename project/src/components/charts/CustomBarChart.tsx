@@ -73,7 +73,7 @@ export const CustomBarChart: React.FC<CustomBarChartProps> = ({
   tooltipFormatter,
 }) => {
   // Default tooltip formatter
-  const defaultTooltipFormatter = (value: number, name: string): string => {
+  const defaultTooltipFormatter = (value: number): string => {
     return `${value.toFixed(2)} tonnes CO₂e`;
   };
 
@@ -121,10 +121,9 @@ export const CustomBarChart: React.FC<CustomBarChartProps> = ({
               boxShadow: '0 8px 20px rgba(20, 78, 48, 0.08)',
               padding: '8px 12px',
             }}
-            formatter={(value, name) => {
+            formatter={(value) => {
               const numValue = typeof value === 'number' ? value : 0;
-              const strName = typeof name === 'string' ? name : '';
-              return [formatter(numValue, strName), strName];
+              return [formatter(numValue, '')];
             }}
           />
         )}

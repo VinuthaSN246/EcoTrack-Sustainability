@@ -12,14 +12,32 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, DateTime,
-    ForeignKey, Text,
+    ForeignKey, Text, CheckConstraint,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy import event
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ecotrack.db')
 DB_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{DB_PATH}"
+if os.environ.get('ECOTRACK_TESTING') == '1':
+    DB_URL = f"sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ecotrack-test.db')}"
+if DB_URL.startswith('sqlite:///') and not DB_URL.startswith('sqlite:////'):
+    sqlite_path = DB_URL.removeprefix('sqlite:///')
+    if sqlite_path and sqlite_path != ':memory:' and not os.path.isabs(sqlite_path):
+        DB_URL = f"sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), sqlite_path)}"
 
-engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
+engine_options = {"echo": False}
+if DB_URL.startswith("sqlite"):
+    engine_options["connect_args"] = {"check_same_thread": False}
+engine = create_engine(DB_URL, **engine_options)
+if engine.dialect.name == "sqlite":
+
+    @event.listens_for(engine, "connect")
+    def enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 SessionLocal = sessionmaker(bind=engine, autoflush=True)
 Base = declarative_base()
 
@@ -47,7 +65,7 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False, unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     footprints = relationship("FootprintRecord", back_populates="user", cascade="all, delete-orphan")
 
@@ -64,7 +82,11 @@ class FootprintRecord(Base):
     travel = Column(Float, nullable=False, default=0)
     total_co2 = Column(Float, nullable=False, default=0)
     eco_score = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    __table_args__ = (
+        CheckConstraint('transportation >= 0 AND electricity >= 0 AND food >= 0 AND waste >= 0 AND travel >= 0 AND total_co2 >= 0', name='ck_footprint_nonnegative'),
+        CheckConstraint('eco_score >= 0 AND eco_score <= 100', name='ck_footprint_score_range'),
+    )
 
     user = relationship("User", back_populates="footprints")
 

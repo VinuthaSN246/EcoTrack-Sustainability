@@ -8,11 +8,11 @@ In today's world, understanding and reducing our environmental impact is more cr
 
 ## 3. Features
 - **Carbon Footprint Calculator**: Estimate your emissions across transportation, electricity, food, and waste.
-- **AI-Powered Recommendations**: Receive personalized tips to reduce your environmental impact.
-- **Machine Learning Integration**: Predict future trends and analyze complex patterns in user data.
+- **Rule-based Recommendations**: Receive personalized tips based on calculator inputs.
+- **Machine Learning Estimate**: Compare the deterministic calculator result with a model trained on synthetic data; this is illustrative, not validated against real-world measurements.
 - **Comprehensive Dashboard**: Visualize your sustainability journey with interactive charts and metrics.
 - **Detailed User Profiles**: Track achievements, activity history, and manage settings.
-- **Secure Data Storage**: Your history and progress are securely saved locally.
+- **Account History**: Signed-in users can save and retrieve footprint history through the Flask API.
 
 ## 4. Tech Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, Recharts, Lucide React
@@ -44,6 +44,39 @@ In today's world, understanding and reducing our environmental impact is more cr
 - Node.js (v18 or higher)
 - Python (v3.8 or higher)
 - npm or yarn package manager
+
+## Security and deployment configuration
+
+The backend uses HTTP-only signed session cookies. Set a unique `SECRET_KEY`, exact frontend origins in `CORS_ORIGINS`, and enable `COOKIE_SECURE=true` behind HTTPS. `backend/.env.example` lists the backend settings. SQLite is suitable for local development; use a managed PostgreSQL database with `postgresql+psycopg://...` for a multi-user deployment. Provision that database, run a schema migration process, and configure backups before launch. Keep `.env` files and local database contents out of source control.
+
+Passwords must be at least 12 characters. Footprint APIs use the authenticated session to determine record ownership; they do not accept a client-selected user ID.
+
+## Emissions methodology
+
+Calculator values are annualized tonnes CO₂e estimates. Transport factors are based on UK DEFRA/BEIS 2023, electricity uses a global-average factor (not a country-specific grid), food factors are broad approximations derived from published research, and waste/recycling and flight tiers are estimates. These factors should be regionally reviewed and versioned before using results for reporting or decisions.
+
+## Local checks
+
+```bash
+npm run typecheck
+npm run lint
+npm run test:run
+cd backend
+python test_flask_api.py
+python test_database.py
+```
+
+## Continuous integration
+
+GitHub Actions runs frontend typecheck, lint, unit tests, and production build, plus backend syntax and isolated API/database checks on pushes and pull requests.
+
+## Release checklist
+
+1. Add a long random `SECRET_KEY` in the hosting provider's secret manager.
+2. Configure the exact deployed frontend origin in `CORS_ORIGINS` and set `COOKIE_SECURE=true` behind HTTPS.
+3. Provision PostgreSQL, set `DATABASE_URL`, and configure backups and schema migrations.
+4. Set `VITE_API_BASE` to the deployed API endpoint, then build and deploy the frontend.
+5. Review and version emission factors for the intended region before treating estimates as decision-grade.
 
 ## 7. Installation & Setup Instructions
 

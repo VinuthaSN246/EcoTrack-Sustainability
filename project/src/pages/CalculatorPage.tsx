@@ -115,6 +115,7 @@ function FieldError({ message }: { message?: string }) {
 }
 
 export function CalculatorPage({ onComplete, onNavigate }: CalculatorProps) {
+  void onNavigate;
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<FormErrors>({});

@@ -3,6 +3,8 @@
 A Python Flask API that serves a Random Forest regression model for
 predicting carbon footprint from lifestyle data.
 
+Recommendations and the chat assistant are rule-based. The prediction model is trained from synthetic values based on the calculator emission formula; its reported test metrics measure agreement with that synthetic target, not real-world accuracy.
+
 ## Architecture
 
 ```
@@ -74,6 +76,9 @@ and provides robust predictions without deep learning complexity.
 cd backend
 pip install -r requirements.txt
 
+# Configure environment from .env.example. Set a unique SECRET_KEY before deployment.
+# For production use HTTPS, COOKIE_SECURE=true, explicit CORS_ORIGINS, and PostgreSQL.
+
 # 1. Generate dataset
 python data/generate_dataset.py
 
@@ -113,3 +118,11 @@ python app.py  # runs on port 5001
 
 ### GET /api/health
 Returns `{ "status": "ok", "model_loaded": true }`
+
+### Development checks
+Run the isolated API and database checks with `python test_flask_api.py` and `python test_database.py` from the backend directory. The scripts use `ecotrack-test.db`, leaving the development database untouched.
+
+### Authentication and footprint storage
+Register and login endpoints establish an HTTP-only session cookie. Use `GET /api/auth/me` to restore the signed-in user and `POST /api/auth/logout` to end the session. Footprint endpoints require that cookie and determine the owner from the server session; clients must not send `user_id`. Registration requires a 12-character password. Configure `SECRET_KEY`, `CORS_ORIGINS`, `COOKIE_SECURE`, and `DATABASE_URL` for each deployment environment. PostgreSQL uses the `postgresql+psycopg://...` URL format; apply schema changes through a migration before deployment.
+
+The model is trained on synthetic data derived from the same calculator factors. Its metrics measure agreement with that synthetic target, not validation against real-world measurements. Treat it as an illustrative estimate.

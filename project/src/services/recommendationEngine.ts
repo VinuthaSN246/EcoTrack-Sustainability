@@ -63,7 +63,6 @@ function buildTransportationRecommendations(
   lifestyle: UserLifestyle,
   co2: number,
   rank: number,
-  total: number,
 ): Recommendation[] {
   const recs: Recommendation[] = [];
   const isHighImpact = rank === 0 && co2 > 0;
@@ -460,14 +459,13 @@ export function generateRecommendations(
 ): RecommendationSummary {
   const ranked = rankCategories(result);
   const total = result.totalCO2;
-
   const all: Recommendation[] = [];
 
   for (const cat of ranked) {
     let recs: Recommendation[] = [];
     switch (cat.name) {
       case 'Transportation':
-        recs = buildTransportationRecommendations(lifestyle, cat.value, ranked.indexOf(cat), total);
+        recs = buildTransportationRecommendations(lifestyle, cat.value, ranked.indexOf(cat));
         break;
       case 'Electricity':
         recs = buildElectricityRecommendations(lifestyle, cat.value, ranked.indexOf(cat));

@@ -29,12 +29,13 @@ def create_user(name: str, email: str, password: str) -> dict:
     """Register a new user. Raises ValueError if email already exists."""
     session = SessionLocal()
     try:
-        existing = session.query(User).filter(User.email == email.lower()).first()
+        email = email.lower().strip()
+        existing = session.query(User).filter(User.email == email).first()
         if existing:
             raise ValueError("Email already registered")
 
-        if len(password) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(password) < 12:
+            raise ValueError("Password must be at least 12 characters")
         if not name.strip():
             raise ValueError("Name is required")
 
@@ -58,6 +59,14 @@ def authenticate_user(email: str, password: str) -> dict | None:
         if not user or not check_password_hash(user.password_hash, password):
             return None
         return {"id": user.id, "name": user.name, "email": user.email}
+    finally:
+        session.close()
+
+def get_user(user_id: int) -> dict | None:
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        return {"id": user.id, "name": user.name, "email": user.email} if user else None
     finally:
         session.close()
 

@@ -81,7 +81,7 @@ export const flightsFactors: Record<string, number> = {
   '6+': 2000, // ESTIMATE: 8+ flights × ~250 kg CO₂e per round-trip (longer haul)
 };
 
-export const globalAveragePerCapita = 4.7; // tonnes CO₂e per person per year (approximate)
+export const globalAveragePerCapita = 4.7; // approximate comparison benchmark; not region-specific
 
 /** Standard scientific and methodology disclaimer */
 export const CALCULATION_DISCLAIMER =

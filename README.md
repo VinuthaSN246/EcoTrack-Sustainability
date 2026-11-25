@@ -87,7 +87,7 @@ python app.py
 
 EcoTrack integrates an 𝐀𝐈 𝐒𝐮𝐬𝐭𝐚𝐢𝐧𝐚𝐛𝐢𝐥𝐢𝐭𝐲 𝐀𝐬𝐬𝐢𝐬𝐭𝐚𝐧𝐭 that helps users understand sustainability concepts, answer environmental questions, and receive practical guidance for making more sustainable choices.
 
-The application also uses AI-powered recommendations and Scikit-Learn-based machine learning to analyze 𝐜𝐚𝐫𝐛𝐨𝐧 𝐟𝐨𝐨𝐭𝐩𝐫𝐢𝐧𝐭 data, identify patterns, and provide sustainability insights.
+Recommendations and assistant answers currently use transparent rule-based logic. The Scikit-Learn prediction endpoint uses synthetic training data derived from the calculator formulas; its results are illustrative estimates and have not been validated against real-world measurements. See `project/README.md` for setup, security configuration, emissions methodology, and verification details.
 
 🌱 𝐏𝐮𝐫𝐩𝐨𝐬𝐞
 
