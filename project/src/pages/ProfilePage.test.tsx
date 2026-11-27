@@ -9,6 +9,9 @@ vi.mock('@/services/api', () => ({
   clearSession: vi.fn(),
   getFootprints: vi.fn(),
   getLatestFootprint: vi.fn(),
+  getProfile: vi.fn().mockResolvedValue({ data: null, error: null }),
+  updateProfile: vi.fn().mockResolvedValue({ data: null, error: null }),
+  saveSession: vi.fn(),
 }));
 
 describe('ProfilePage', () => {

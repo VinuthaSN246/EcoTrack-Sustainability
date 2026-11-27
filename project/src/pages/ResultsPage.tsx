@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Car,
@@ -6,6 +7,7 @@ import {
   Leaf,
   Plane,
   Recycle,
+  Save,
   Sparkles,
   Sprout,
   TrendingDown,
@@ -13,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import type { FormData } from '@/types';
+import { getCurrentUser, saveFootprint, type User } from '@/services/api';
 import { calculateFromFormData } from '@/services/carbonCalculator';
 import {
   CALCULATION_DISCLAIMER,
@@ -28,6 +31,18 @@ interface ResultsPageProps {
 
 export function ResultsPage({ data, onNavigate, onGoDashboard }: ResultsPageProps) {
   const result = calculateFromFormData(data);
+  const [user, setUser] = useState<User | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  useEffect(() => {
+    getCurrentUser().then(({ data: response }) => setUser(response?.user ?? null));
+  }, []);
+
+  const handleSave = async () => {
+    if (!user) { onGoDashboard(); return; }
+    setSaveState('saving');
+    const { error } = await saveFootprint(data);
+    setSaveState(error ? 'error' : 'saved');
+  };
 
   // 5 distinct categories as requested
   const categoryCards = [
@@ -300,6 +315,9 @@ export function ResultsPage({ data, onNavigate, onGoDashboard }: ResultsPageProp
                 Ready to track your progress over time or test different daily habits?
               </p>
               <div className="results-note-actions">
+                <button type="button" className="button button-light" onClick={handleSave} disabled={saveState === 'saving' || saveState === 'saved'}>
+                  <Save size={16} /> {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved to History' : saveState === 'error' ? 'Retry Save' : user ? 'Save to History' : 'Sign In to Save'}
+                </button>
                 <button type="button" className="button button-light" onClick={onGoDashboard}>
                   View Dashboard <ArrowRight size={16} />
                 </button>
@@ -318,6 +336,7 @@ export function ResultsPage({ data, onNavigate, onGoDashboard }: ResultsPageProp
                   Back to Home
                 </button>
               </div>
+              {saveState === 'error' && <p className="field-error" role="alert">Could not save this calculation. Check your connection and try again.</p>}
             </div>
           </div>
         </div>

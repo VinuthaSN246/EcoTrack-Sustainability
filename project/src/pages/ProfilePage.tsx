@@ -38,7 +38,10 @@ import {
   clearSession,
   getFootprints,
   getLatestFootprint,
+  getProfile,
   loadSession,
+  saveSession,
+  updateProfile,
   type FootprintRecord,
   type User as UserType,
 } from '@/services/api';
@@ -103,13 +106,17 @@ function saveSettings(s: ProfileSettings) {
 }
 
 function loadProfile(user: UserType | null): ProfileInfo {
+  if (user) return {
+    fullName: user.name, email: user.email, location: '', status: '',
+    tagline: 'Learning, building and growing sustainably 🌱', avatarUrl: '',
+  };
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (raw) return JSON.parse(raw) as ProfileInfo;
   } catch { /* ignore */ }
   return {
-    fullName: user?.name ?? '',
-    email: user?.email ?? '',
+    fullName: '',
+    email: '',
     location: '',
     status: '',
     tagline: 'Learning, building and growing sustainably 🌱',
@@ -165,14 +172,15 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [latestRecord, setLatestRecord] = useState<FootprintRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [settings, setSettings] = useState<ProfileSettings>(loadSettings);
+  const [settings, setSettings] = useState<ProfileSettings>(() => user ? { emailDigest: true, reductionReminders: true, darkMode: false, units: 'metric' } : loadSettings());
   const [profile, setProfile] = useState<ProfileInfo>(() => loadProfile(user));
-  const [interests, setInterests] = useState<string[]>(loadInterests);
+  const [interests, setInterests] = useState<string[]>(() => user ? [] : loadInterests());
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<ProfileInfo>(profile);
   const [editErrors, setEditErrors] = useState<Partial<Record<keyof ProfileInfo, string>>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -183,6 +191,18 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     const u = loadSession();
     setUser(u);
     if (!u) { setLoading(false); return; }
+
+    Promise.resolve().then(() => getProfile()).then(({ data, error }) => {
+      if (data && !error) {
+        const saved = data.profile;
+        setProfile({ fullName: saved.user.name, email: saved.user.email, location: saved.location, status: saved.status, tagline: saved.tagline, avatarUrl: saved.avatarUrl });
+        setSettings(saved.settings);
+        setInterests(saved.interests);
+        saveSession(saved.user);
+      } else if (error) {
+        setProfileError(`Could not load your saved profile: ${error}`);
+      }
+    }).catch(() => setProfileError('Could not load your saved profile.'));
 
     Promise.all([
       getFootprints(),
@@ -259,19 +279,23 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   /* ── Handlers ── */
   const handleToggle = (key: keyof ProfileSettings) => {
-    setSettings((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
-      saveSettings(updated);
-      return updated;
+    const updated = { ...settings, [key]: !settings[key] };
+    setSettings(updated);
+    if (user) void updateProfile({ settings: updated }).then(({ error }) => {
+      if (error) { setSettings(settings); setProfileError(`Could not save preferences: ${error}`); }
+      else setProfileError(null);
     });
+    else saveSettings(updated);
   };
 
   const handleUnitToggle = () => {
-    setSettings((prev) => {
-      const updated = { ...prev, units: prev.units === 'metric' ? 'imperial' as const : 'metric' as const };
-      saveSettings(updated);
-      return updated;
+    const updated = { ...settings, units: settings.units === 'metric' ? 'imperial' as const : 'metric' as const };
+    setSettings(updated);
+    if (user) void updateProfile({ settings: updated }).then(({ error }) => {
+      if (error) { setSettings(settings); setProfileError(`Could not save preferences: ${error}`); }
+      else setProfileError(null);
     });
+    else saveSettings(updated);
   };
 
   const handleLogout = () => {
@@ -280,11 +304,13 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
   };
 
   const handleInterestToggle = (id: string) => {
-    setInterests((prev) => {
-      const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-      saveInterests(next);
-      return next;
+    const next = interests.includes(id) ? interests.filter((i) => i !== id) : [...interests, id];
+    setInterests(next);
+    if (user) void updateProfile({ interests: next }).then(({ error }) => {
+      if (error) { setInterests(interests); setProfileError(`Could not save interests: ${error}`); }
+      else setProfileError(null);
     });
+    else saveInterests(next);
   };
 
   /* ── Edit profile ── */
@@ -305,11 +331,20 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!validateEdit()) return;
     const updated = { ...editForm, fullName: editForm.fullName.trim(), email: editForm.email.trim() };
-    setProfile(updated);
-    saveProfile(updated);
+    setProfileError(null);
+    if (user) {
+      const { data, error } = await updateProfile({ name: updated.fullName, email: updated.email, location: updated.location, status: updated.status, tagline: updated.tagline, avatarUrl: updated.avatarUrl });
+      if (error || !data) { setProfileError(error ?? 'Could not save your profile.'); return; }
+      setProfile({ ...updated, fullName: data.profile.user.name, email: data.profile.user.email });
+      saveSession(data.profile.user);
+      setUser(data.profile.user);
+    } else {
+      setProfile(updated);
+      saveProfile(updated);
+    }
     setSaveSuccess(true);
     setTimeout(() => { setEditOpen(false); setSaveSuccess(false); }, 1200);
   };
@@ -338,6 +373,8 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
 
       <div className="calc-body">
         <div className="container">
+
+          {profileError && <p className="field-error" role="alert">{profileError}</p>}
 
           {/* ══════════ 1. PROFILE HEADER ══════════ */}
           <div className="profile-card" style={{ marginBottom: 24 }}>
@@ -724,7 +761,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                   </div>
                   <div>
                     <strong>Email Digest</strong>
-                    <span>Weekly summary of your eco impact</span>
+                    <span>Preference for a weekly summary; email delivery is not configured</span>
                   </div>
                 </div>
                 <button
@@ -744,7 +781,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                   </div>
                   <div>
                     <strong>Reduction Reminders</strong>
-                    <span>Tips and nudges to reduce your footprint</span>
+                    <span>Preference for reduction reminders; notification delivery is not configured</span>
                   </div>
                 </div>
                 <button

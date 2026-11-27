@@ -1,10 +1,10 @@
-# EcoTrack - AI-Powered Sustainability Application
+# EcoTrack - Sustainability Tracking Application
 
 ## 1. Project Title
 EcoTrack
 
 ## 2. Problem Statement
-In today's world, understanding and reducing our environmental impact is more critical than ever. However, tracking daily habits and understanding their true carbon cost can be complex and overwhelming. EcoTrack exists to simplify this process, providing users with an intuitive, AI-powered platform to calculate their carbon footprint, receive personalized sustainability recommendations, and track their progress over time.
+In today's world, understanding and reducing our environmental impact is more critical than ever. However, tracking daily habits and understanding their true carbon cost can be complex and overwhelming. EcoTrack exists to simplify this process, providing users with an intuitive sustainability platform to estimate their carbon footprint, receive rule-based personalized recommendations, and track their progress over time.
 
 ## 3. Features
 - **Carbon Footprint Calculator**: Estimate your emissions across transportation, electricity, food, and waste.
@@ -128,13 +128,18 @@ The Vite development server will start, typically on `http://localhost:5173`.
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/register` | Register a new user |
-| `POST` | `/api/login` | Authenticate a user |
-| `GET` | `/api/user/<id>` | Fetch user profile data |
-| `POST` | `/api/footprints` | Save a new footprint calculation |
-| `GET` | `/api/footprints/<user_id>` | Get all footprint history for a user |
-| `GET` | `/api/recommendations` | Get personalized recommendations based on footprint |
-| `POST` | `/api/predict` | Get ML-based prediction for future footprint |
+| `POST` | `/api/auth/register` | Register an account and start a session |
+| `POST` | `/api/auth/login` | Authenticate and start a session |
+| `GET` | `/api/auth/me` | Restore the current session user |
+| `POST` | `/api/auth/logout` | End the current session |
+| `GET`, `PUT` | `/api/profile` | Read or update the signed-in user's profile, interests, and preferences |
+| `POST` | `/api/footprints` | Save a calculation for the signed-in user |
+| `GET` | `/api/footprints` | Get the signed-in user's history |
+| `GET` | `/api/footprints/latest` | Get the signed-in user's latest calculation |
+| `GET` | `/api/recommendations` | Get recommendation templates |
+| `POST` | `/api/assistant` | Get a rule-based sustainability response |
+| `POST` | `/api/predict` | Get an experimental model estimate from lifestyle inputs |
+| `GET` | `/api/health` | Check API, database, and model availability |
 
 ## 10. Database Schema
 
@@ -154,6 +159,7 @@ The application uses SQLite with SQLAlchemy ORM.
 - `electricity`: Float
 - `food`: Float
 - `waste`: Float
+- `travel`: Float
 - `total_co2`: Float
 - `eco_score`: Integer
 - `created_at`: DateTime
@@ -163,16 +169,24 @@ The application uses SQLite with SQLAlchemy ORM.
 - `category`: String
 - `title`: String
 - `description`: Text
-- `priority`: Integer
+- `priority`: String
+
+**`user_profiles` Table:**
+- `user_id`: Integer, Primary Key and Foreign Key (`users.id`)
+- `location`, `status`, `tagline`, `avatar_url`: Optional profile details
+- `settings_json`, `interests_json`: Account preferences and selected sustainability interests
+- `updated_at`: DateTime
 
 ## 11. Machine Learning Integration Details
-The backend includes a machine learning service that analyzes user footprint data. It uses historical records to identify patterns and predict future emission trends. The models are trained locally on anonymized data patterns to provide customized insights without exposing sensitive user information.
+The backend includes an experimental Random Forest estimate. It is trained on synthetic data generated from the application's own calculator factors. It does not learn from account history and its scores do not establish real-world accuracy. Treat it as an illustrative estimate, not a validated forecast.
 
 ## 12. Security Features
 - **Password Hashing**: User passwords are securely hashed using `werkzeug.security` before storage. No plain-text passwords are saved.
 - **Input Validation**: Strict validation on the backend ensures data integrity and prevents injection attacks.
-- **Environment Variables**: Sensitive configuration (like database URLs and API keys) are managed via `.env` files, keeping them out of version control.
+- **Environment Variables**: Sensitive configuration (like database URLs and session secrets) is managed outside source control.
 - **CORS Configuration**: Cross-Origin Resource Sharing is restricted to authorized frontend domains.
+
+The assistant uses deterministic topic rules; it does not connect to a generative AI provider. Profile interests and preferences are saved to the account when signed in. Email digest and reminder values are preferences only; no email delivery service is configured.
 
 ## 13. Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.

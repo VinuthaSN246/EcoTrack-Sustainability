@@ -99,3 +99,17 @@ class Recommendation(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     priority = Column(String(20), nullable=False, default="Medium")
+
+
+class UserProfile(Base):
+    """Optional account profile and preferences stored per authenticated user."""
+    __tablename__ = "user_profiles"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    location = Column(String(120), nullable=False, default="")
+    status = Column(String(120), nullable=False, default="")
+    tagline = Column(String(240), nullable=False, default="Learning, building and growing sustainably 🌱")
+    avatar_url = Column(String(500), nullable=False, default="")
+    settings_json = Column(Text, nullable=False, default='{"emailDigest":true,"reductionReminders":true,"darkMode":false,"units":"metric"}')
+    interests_json = Column(Text, nullable=False, default="[]")
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

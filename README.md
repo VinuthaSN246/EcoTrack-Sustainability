@@ -1,6 +1,6 @@
-# 🌱 EcoTrack — AI-Powered Sustainability Application
+# 🌱 EcoTrack — Sustainability Tracking Application
 
-**EcoTrack** is an AI-powered sustainability application designed to help users understand, track, and reduce their environmental impact. It combines carbon footprint calculation, personalized sustainability recommendations, an AI Sustainability Assistant, interactive data visualization, and machine learning-based emission prediction in one platform.
+**EcoTrack** is a sustainability application designed to help users estimate and track their environmental impact. It combines carbon footprint calculation, rule-based personalized recommendations, a sustainability assistant, interactive data visualization, and an experimental machine learning estimate.
 
 The application helps users make informed environmental decisions by tracking their carbon footprint, monitoring sustainability progress, and discovering practical ways to adopt eco-friendly habits.
 
@@ -9,13 +9,13 @@ The application helps users make informed environmental decisions by tracking th
 ## 🚀 Key Features
 
 - 🌍 **Carbon Footprint Calculator** — Calculate carbon emissions based on transportation, electricity consumption, food habits, and waste generation.
-- 🤖 **AI Sustainability Assistant** — Interact with an AI-powered assistant to explore sustainability topics and receive environmental guidance.
-- 💡 **Personalized Sustainability Recommendations** — Discover practical suggestions based on carbon footprint data and sustainability goals.
+- 🤖 **Sustainability Assistant** — Get topic-based, rule-driven guidance for common sustainability questions.
+- 💡 **Personalized Sustainability Recommendations** — Get rule-based actions ranked using the footprint estimate and saved interests.
 - 📊 **Interactive Sustainability Dashboard** — Visualize carbon emissions, activity data, and sustainability progress.
-- 📈 **Machine Learning-Based Emission Prediction** — Use machine learning to analyze emission data and estimate future trends.
-- 👤 **User Profiles** — Maintain individual user information and sustainability preferences.
-- 📋 **Activity History** — Track previous calculations and monitor changes over time.
-- 🗄️ **Database Integration** — Store application data using SQLite and SQLAlchemy.
+- 📈 **Experimental Emission Estimate** — Compare calculator output with a model trained on synthetic calculator data; it is not validated against real-world measurements.
+- 👤 **User Profiles** — Save account details, interests, and preferences to the backend.
+- 📋 **Activity History** — Save and review calculations for signed-in accounts.
+- 🗄️ **Database Integration** — Use SQLite for local development; configure PostgreSQL for deployment.
 - 🌱 **Environmental Insights** — Understand emission patterns and identify opportunities to reduce environmental impact.
 
 ---
@@ -42,9 +42,9 @@ The application helps users make informed environmental decisions by tracking th
 ### Machine Learning
 - Scikit-learn
 
-### Artificial Intelligence
-- AI Sustainability Assistant
-- AI-powered sustainability recommendations
+### Sustainability Logic
+- Deterministic topic responses
+- Rule-based recommendations personalized from footprint inputs and saved interests
 
 ---
 
@@ -72,11 +72,11 @@ EcoTrack follows a frontend-backend architecture in which the user interface com
        │   SQLite Database│   │ AI / ML Components │
        │  SQLAlchemy ORM  │   │ Recommendations    │
        └──────────────────┘   │ Emission Prediction│
-                              │ Sustainability AI  │
+                              │ Rule-Based Assistant│
                               └────────────────────┘
 ```
 
-*Note: This diagram represents the application's high-level architecture. The exact integration of individual AI and machine learning components depends on their implementation.*
+*Note: The assistant and recommendation engine are rule-based. The ML estimate is experimental and uses synthetic training data derived from the calculator.*
 
 ---
 
@@ -197,28 +197,28 @@ The backend will run at the address configured in the application.
 
 ---
 
-## 🤖 AI and Machine Learning
+## 🤖 Assistant and Machine Learning Estimate
 
-EcoTrack combines AI-powered sustainability assistance with data-driven environmental insights.
+EcoTrack combines a rule-based sustainability assistant with calculator-based insights and an experimental prediction model.
 
 **Implementation note:** The current assistant and recommendations are rule-based, not generative AI. The emission prediction model is experimental and uses synthetic data derived from the calculator; its predictions have not been validated against real-world observations. Treat predictions as illustrative estimates.
 
-### AI Sustainability Assistant
+### Sustainability Assistant
 
-The AI Sustainability Assistant is designed to help users:
+The rule-based Sustainability Assistant is designed to help users:
 
 - Understand environmental and sustainability concepts.
 - Explore practical ways to adopt eco-friendly habits.
 - Receive guidance on reducing their environmental impact.
 - Make more informed sustainability-related decisions.
 
-### AI-Powered Recommendations
+### Personalized Recommendations
 
 The application provides sustainability recommendations intended to help users identify practical improvements based on their carbon footprint and environmental activities.
 
-### Machine Learning-Based Emission Prediction
+### Experimental Machine Learning Estimate
 
-Scikit-learn supports the machine learning component of EcoTrack, which is designed to analyze carbon footprint data, identify patterns, and estimate future emission trends.
+Scikit-learn supports an experimental model that estimates emissions from the same lifestyle inputs used by the calculator. The model uses synthetic data generated from the calculator factors, so its metrics do not measure real-world predictive accuracy.
 
 These capabilities help users understand their environmental impact and explore opportunities for improvement.
 
@@ -289,7 +289,7 @@ It contains additional information about the application's implementation, API e
 
 ## 🌱 Project Vision
 
-EcoTrack aims to make sustainability more understandable and actionable by combining carbon footprint tracking, AI-assisted guidance, and data-driven insights in a single application.
+EcoTrack aims to make sustainability more understandable and actionable by combining carbon footprint tracking, rule-based guidance, and data-driven estimates in a single application.
 
 **Understand your impact. Make informed choices. Build a more sustainable future.** 🌍
 

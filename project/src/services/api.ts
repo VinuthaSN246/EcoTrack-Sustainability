@@ -33,6 +33,16 @@ export interface FootprintRecord {
   created_at: string | null;
 }
 
+export interface AccountProfile {
+  user: User;
+  location: string;
+  status: string;
+  tagline: string;
+  avatarUrl: string;
+  settings: { emailDigest: boolean; reductionReminders: boolean; darkMode: boolean; units: 'metric' | 'imperial' };
+  interests: string[];
+}
+
 interface ApiResponse<T> {
   data: T | null;
   error: string | null;
@@ -79,6 +89,16 @@ export async function loginUser(email: string, password: string): Promise<ApiRes
 
 export async function getCurrentUser(): Promise<ApiResponse<{ user: User | null }>> {
   return apiFetch('/auth/me');
+}
+
+export async function getProfile(): Promise<ApiResponse<{ profile: AccountProfile }>> {
+  return apiFetch('/profile');
+}
+
+export async function updateProfile(
+  changes: Partial<Omit<AccountProfile, 'user'>> & { name?: string; email?: string },
+): Promise<ApiResponse<{ profile: AccountProfile }>> {
+  return apiFetch('/profile', { method: 'PUT', body: JSON.stringify(changes) });
 }
 
 // ── Footprints ──────────────────────────────────────────────────
@@ -133,7 +153,7 @@ export function clearSession(): void {
   void apiFetch('/auth/logout', { method: 'POST' });
 }
 
-// ── AI Assistant ────────────────────────────────────────────────
+// ── Rule-based sustainability assistant ─────────────────────────
 
 export async function sendMessageToAssistant(message: string): Promise<ApiResponse<{ reply: string }>> {
   return apiFetch('/assistant', {

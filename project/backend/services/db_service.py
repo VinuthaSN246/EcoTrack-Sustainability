@@ -11,13 +11,14 @@ Handles:
 
 import os
 import sys
+import json
 from datetime import datetime, timezone
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import SessionLocal, User, FootprintRecord, Recommendation, init_db
+from database import SessionLocal, User, UserProfile, FootprintRecord, Recommendation, init_db
 
 # Ensure tables exist on import
 init_db()
@@ -69,6 +70,64 @@ def get_user(user_id: int) -> dict | None:
         return {"id": user.id, "name": user.name, "email": user.email} if user else None
     finally:
         session.close()
+
+
+def get_profile(user_id: int) -> dict | None:
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            return None
+        profile = session.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        defaults = {
+            "location": "", "status": "",
+            "tagline": "Learning, building and growing sustainably 🌱", "avatarUrl": "",
+            "settings": {"emailDigest": True, "reductionReminders": True, "darkMode": False, "units": "metric"},
+            "interests": [],
+        }
+        if not profile:
+            return {"user": {"id": user.id, "name": user.name, "email": user.email}, **defaults}
+        return {
+            "user": {"id": user.id, "name": user.name, "email": user.email},
+            "location": profile.location, "status": profile.status,
+            "tagline": profile.tagline, "avatarUrl": profile.avatar_url,
+            "settings": json.loads(profile.settings_json),
+            "interests": json.loads(profile.interests_json),
+        }
+    finally:
+        session.close()
+
+
+def update_profile(user_id: int, payload: dict) -> dict:
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.id == user_id).with_for_update().first()
+        if not user:
+            raise LookupError("User not found")
+        if "name" in payload:
+            user.name = payload["name"]
+        if "email" in payload:
+            user.email = payload["email"]
+        profile = session.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        if profile is None:
+            profile = UserProfile(user_id=user_id)
+            session.add(profile)
+        for key, column in (("location", "location"), ("status", "status"), ("tagline", "tagline")):
+            if key in payload:
+                setattr(profile, column, payload[key])
+        if "avatarUrl" in payload:
+            profile.avatar_url = payload["avatarUrl"]
+        if "settings" in payload:
+            profile.settings_json = json.dumps(payload["settings"], separators=(",", ":"))
+        if "interests" in payload:
+            profile.interests_json = json.dumps(payload["interests"], separators=(",", ":"))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+    return get_profile(user_id)
 
 
 # ── Footprint Records ────────────────────────────────────────────

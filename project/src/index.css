@@ -887,8 +887,9 @@ h1 em, h2 em { color: var(--green); font-family: 'Fraunces', serif; font-weight:
 
 .chat-fab {
   position: relative;
-  width: 96px;
-  height: 96px;
+  box-sizing: border-box;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   background: #f8fbf7;
   border: 3px solid white;
@@ -936,8 +937,8 @@ h1 em, h2 em { color: var(--green); font-family: 'Fraunces', serif; font-weight:
   }
 
   .chat-fab {
-    width: 124px;
-    height: 124px;
+    width: 100px;
+    height: 100px;
   }
 
   .chat-fab-prompt {
@@ -1065,6 +1066,14 @@ h1 em, h2 em { color: var(--green); font-family: 'Fraunces', serif; font-weight:
   width: 100%;
 }
 
+.chat-privacy-note {
+  display: block;
+  margin-top: 10px;
+  color: #58716a;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .chat-suggestions {
   display: flex;
   flex-direction: column;
@@ -1152,6 +1161,33 @@ h1 em, h2 em { color: var(--green); font-family: 'Fraunces', serif; font-weight:
   border-bottom-left-radius: 6px;
 }
 
+.chat-retry-btn {
+  display: block;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid #b7d4c4;
+  border-radius: 8px;
+  background: #fff;
+  color: #176a53;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chat-retry-btn:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.chat-retry-btn:focus-visible,
+.chat-icon-btn:focus-visible,
+.chat-fab:focus-visible,
+.chat-suggestion-btn:focus-visible,
+.chat-send-btn:focus-visible {
+  outline: 3px solid #176a53;
+  outline-offset: 3px;
+}
+
 .chat-loading {
   display: flex;
   align-items: center;
@@ -1219,7 +1255,7 @@ h1 em, h2 em { color: var(--green); font-family: 'Fraunces', serif; font-weight:
 
   .chat-fab-prompt strong { font-size: 12px; }
   .chat-fab-prompt small { font-size: 10px; }
-  .chat-fab { width: 72px; height: 72px; }
+  .chat-fab { width: 64px; height: 64px; }
 
   .chat-window {
     right: 16px;

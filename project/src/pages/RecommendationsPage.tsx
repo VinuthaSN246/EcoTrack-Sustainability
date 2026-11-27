@@ -13,7 +13,7 @@ import {
   Utensils,
   Zap,
 } from 'lucide-react';
-import { loadSession, getLatestFootprint, type FootprintRecord } from '@/services/api';
+import { loadSession, getLatestFootprint, getProfile, type FootprintRecord } from '@/services/api';
 import { generateRecommendationsFromFormData, type Recommendation, type Priority } from '@/services/recommendationEngine';
 import type { FormData } from '@/types';
 
@@ -34,6 +34,8 @@ const categoryIcons: Record<string, React.ElementType> = {
   Food:           Utensils,
   Waste:          Recycle,
   Travel:         Plane,
+  Water:          Sprout,
+  'Climate Action': Sprout,
 };
 
 const categoryColors: Record<string, { bg: string; color: string }> = {
@@ -42,6 +44,8 @@ const categoryColors: Record<string, { bg: string; color: string }> = {
   Food:           { bg: '#fff8ec', color: '#e0932a' },
   Waste:          { bg: '#f2eff9', color: '#8b6fc0' },
   Travel:         { bg: '#fef3f0', color: '#d4562f' },
+  Water:          { bg: '#eaf5f5', color: '#1594a1' },
+  'Climate Action': { bg: '#eaf7ed', color: '#118865' },
 };
 
 function generateRecommendationsFromStoredRecord(record: FootprintRecord): Recommendation[] {
@@ -114,6 +118,7 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
   const [latestRecord, setLatestRecord] = useState<FootprintRecord | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [interests, setInterests] = useState<string[]>([]);
 
   // Try to load latest saved footprint from the database for users who don't have local formData
   useEffect(() => {
@@ -122,25 +127,26 @@ export function RecommendationsPage({ formData, onNavigate }: RecommendationsPag
       setDbLoading(false);
       return;
     }
-    getLatestFootprint().then(({ data, error }) => {
+    Promise.all([getLatestFootprint(), getProfile()]).then(([{ data, error }, profileResult]) => {
       setDbLoading(false);
       if (data && !error && data.footprint) {
         setLatestRecord(data.footprint);
       } else if (error && error !== 'HTTP 404' && error !== 'Authentication required') {
         setLoadError(error);
       }
+      if (profileResult.data && !profileResult.error) setInterests(profileResult.data.profile.interests);
     });
   }, []);
 
   // Build recommendations from formData (most accurate, direct from session)
   const recommendations = formData
-    ? generateRecommendationsFromFormData(formData).recommendations
+    ? generateRecommendationsFromFormData(formData, interests).recommendations
     : latestRecord
       ? generateRecommendationsFromStoredRecord(latestRecord)
       : [];
 
   const headline = formData
-    ? generateRecommendationsFromFormData(formData).headline
+    ? generateRecommendationsFromFormData(formData, interests).headline
     : latestRecord
       ? 'Focus on the categories contributing most to your latest saved footprint.'
       : null;

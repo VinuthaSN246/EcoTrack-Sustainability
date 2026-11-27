@@ -59,6 +59,7 @@ import {
   clearSession,
   registerUser,
   loginUser,
+  getProfile,
   saveFootprint,
   getFootprints,
   type User,
@@ -95,7 +96,7 @@ export function DashboardPage({ data, previousTotal, onNavigate }: DashboardPage
                 Your <em>Eco Dashboard</em>
               </h1>
               <p className="calc-intro">
-                Calculate your carbon footprint to unlock detailed breakdowns, AI insights, and ML predictions.
+                Calculate your carbon footprint to unlock breakdowns, rule-based recommendations, and an experimental model estimate.
               </p>
             </div>
           </div>
@@ -124,7 +125,8 @@ export function DashboardPage({ data, previousTotal, onNavigate }: DashboardPage
 function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData; previousTotal: number | null; onNavigate: (page: 'home' | 'calculator' | 'results' | 'dashboard' | 'progress' | 'profile' | 'recommendations') => void }) {
   const result: CarbonResult = calculateFromFormData(data);
   const lifestyle = mapFormData(data);
-  const { headline: recHeadline, recommendations } = generateRecommendations(result, lifestyle);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const { headline: recHeadline, recommendations } = generateRecommendations(result, lifestyle, selectedInterests);
   const recSectionRef = useRef<HTMLElement>(null);
   const ecoScore = calculateEcoScore(result.totalCO2);
   const scoreBand = getScoreBand(ecoScore);
@@ -187,6 +189,13 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
       if (d && !error) {
         setHistory(d.footprints);
       }
+    });
+  }, [user, sessionReady]);
+
+  useEffect(() => {
+    if (!sessionReady || !user) { setSelectedInterests([]); return; }
+    getProfile().then(({ data }) => {
+      if (data?.profile) setSelectedInterests(data.profile.interests);
     });
   }, [user, sessionReady]);
 
@@ -255,6 +264,8 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
     Food: Utensils,
     Waste: Recycle,
     'Air Travel': Plane,
+    Water: Globe,
+    'Climate Action': Sprout,
   };
 
   const [animatedScore, setAnimatedScore] = useState(0);
@@ -581,11 +592,11 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
               <div>
                 <h2 className="dashboard-section-title">ML-Based Estimate</h2>
                 <p className="dashboard-recs-headline">
-                  A Random Forest regression model predicts your footprint from lifestyle patterns.
+                  A Random Forest model estimates your footprint from lifestyle inputs. It was trained on synthetic calculator data and is not validated against real-world measurements.
                 </p>
               </div>
             </div>
-            <span className="dashboard-recs-badge">Machine Learning</span>
+            <span className="dashboard-recs-badge">Experimental · Synthetic Data</span>
           </div>
 
           <div className="dashboard-ml-grid">
@@ -667,7 +678,7 @@ function DashboardContent({ data, previousTotal, onNavigate }: { data: FormData;
           </div>
         </section>
 
-        {/* AI Sustainability Insights */}
+        {/* Rule-based Sustainability Insights */}
         <section className="dashboard-recs-section" ref={recSectionRef}>
           <div className="dashboard-recs-header">
             <div className="dashboard-recs-header-left">

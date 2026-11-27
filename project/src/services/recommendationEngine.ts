@@ -18,7 +18,7 @@ import type { FormData } from '@/types';
  */
 
 export type Priority = 'High' | 'Medium' | 'Low';
-export type RecommendationCategory = 'Transportation' | 'Electricity' | 'Food' | 'Waste' | 'Travel';
+export type RecommendationCategory = 'Transportation' | 'Electricity' | 'Food' | 'Waste' | 'Travel' | 'Water' | 'Climate Action';
 
 export interface Recommendation {
   id: string;
@@ -456,6 +456,7 @@ const priorityOrder: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 };
 export function generateRecommendations(
   result: CarbonResult,
   lifestyle: UserLifestyle,
+  interests: string[] = [],
 ): RecommendationSummary {
   const ranked = rankCategories(result);
   const total = result.totalCO2;
@@ -483,10 +484,30 @@ export function generateRecommendations(
     all.push(...recs);
   }
 
+  if (interests.includes('water')) all.push({
+    id: 'interest-water-conservation', category: 'Water', title: 'Reduce water use at home',
+    explanation: 'Water conservation is one of your selected sustainability interests.',
+    action: 'Check for leaks, use efficient fixtures, and reduce hot-water use where practical.',
+    priority: 'Medium', estimatedImpact: null,
+  });
+  if (interests.includes('climate_action')) all.push({
+    id: 'interest-climate-action', category: 'Climate Action', title: 'Choose a practical climate action',
+    explanation: 'Climate action is one of your selected sustainability interests.',
+    action: 'Focus on one repeatable change, such as lower-emission travel, energy savings, or reducing food waste.',
+    priority: 'Medium', estimatedImpact: null,
+  });
+
   // Sort by priority (High first), then by estimated impact (descending)
   const sorted = all.sort((a, b) => {
     const pDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (pDiff !== 0) return pDiff;
+    const interestCategory: Record<string, RecommendationCategory> = {
+      energy: 'Electricity', waste: 'Waste', transport: 'Transportation', food: 'Food',
+      water: 'Water', climate_action: 'Climate Action',
+    };
+    const aPreferred = interests.some((interest) => interestCategory[interest] === a.category) ? 1 : 0;
+    const bPreferred = interests.some((interest) => interestCategory[interest] === b.category) ? 1 : 0;
+    if (aPreferred !== bPreferred) return bPreferred - aPreferred;
     const aImpact = a.estimatedImpact ?? 0;
     const bImpact = b.estimatedImpact ?? 0;
     return bImpact - aImpact;
@@ -505,8 +526,8 @@ export function generateRecommendations(
 }
 
 /** Convenience: generate recommendations directly from FormData. */
-export function generateRecommendationsFromFormData(data: FormData): RecommendationSummary {
+export function generateRecommendationsFromFormData(data: FormData, interests: string[] = []): RecommendationSummary {
   const lifestyle = mapFormData(data);
   const result = calculateCarbon(lifestyle);
-  return generateRecommendations(result, lifestyle);
+  return generateRecommendations(result, lifestyle, interests);
 }

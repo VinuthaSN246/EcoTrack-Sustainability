@@ -1086,7 +1086,7 @@ export function ProgressPage({ onNavigate }: ProgressPageProps) {
             <div className="dashboard-disclaimer" style={{ marginBottom: 20 }}>
               <Sprout size={18} />
               <p>
-                Calculations represent greenhouse gas equivalencies based on verified IPCC emission factors. Continue logging regular assessments to measure long-term sustainability impact.
+                Calculations are approximate annual emissions estimates using mixed-source factors, including UK transport data, a global-average electricity factor, and estimated food, waste, and flight values. Continue logging assessments to compare your estimates over time.
               </p>
             </div>
 
